@@ -16,8 +16,14 @@
 .logo {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+}
+
+.logo-mark {
+  font-size: 20px;
+  font-weight: 700;
   color: var(--olive);
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .logo h1 {
@@ -27,16 +33,15 @@
   color: var(--text-primary);
 }
 
-.ready-badge {
+.version-badge {
   font-size: 10px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  padding: 4px 12px;
-  background: var(--olive-bg);
-  color: var(--olive-light);
-  border: 1px solid var(--olive-border);
+  padding: 3px 8px;
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
   border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .header-actions {

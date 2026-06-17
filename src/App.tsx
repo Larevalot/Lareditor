@@ -193,12 +193,9 @@ function App() {
     <div className="app">
       <header className="app-header">
         <div className="logo">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <polygon points="23 7 16 12 23 17 23 7" />
-            <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
-          </svg>
-          <h1>LarEditor</h1>
-          <span className="ready-badge">{t.ready}</span>
+          <span className="logo-mark">[v]</span>
+          <h1>larEditor</h1>
+          <span className="version-badge">v0.0.3</span>
         </div>
         <div className="header-actions">
           <button className="btn-header" onClick={cycleTheme} title={t.theme}>

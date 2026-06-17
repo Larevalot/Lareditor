@@ -65,7 +65,7 @@ export function VideoPreview({ videoUrl, overlays, volume, onOverlayUpdate, onDu
       video.removeEventListener('ended', onEnded);
       cancelAnimationFrame(animRef.current);
     };
-  }, [videoUrl]);
+  }, [videoUrl, onDurationChange]);
 
   useEffect(() => {
     const video = videoRef.current;
