@@ -42,6 +42,16 @@ export function OverlayManager({ overlays, onAdd, onAddText, onAddAudio, onUpdat
     return `${min}:${sec.toString().padStart(2, '0')}`;
   };
 
+  const getDefaultColor = (type: string) => {
+    switch (type) {
+      case 'video': return '#6B8E23';
+      case 'image': return '#5B9BD5';
+      case 'text': return '#E8A838';
+      case 'audio': return '#9B59B6';
+      default: return '#6B8E23';
+    }
+  };
+
   const handleAddText = () => {
     if (!textValue.trim()) return;
     onAddText(textValue, {
@@ -332,6 +342,53 @@ export function OverlayManager({ overlays, onAdd, onAddText, onAddAudio, onUpdat
                       </div>
                     )}
 
+                    {o.media.type === 'video' && !isAudio && (
+                      <div className="control-group">
+                        <span className="control-label">{t.volume}</span>
+                        <label className="volume-label">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                            {(o.audioVolume ?? 1) > 0 ? (
+                              (o.audioVolume ?? 1) > 0.5 ? (
+                                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
+                              ) : (
+                                <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                              )
+                            ) : (
+                              <>
+                                <line x1="23" y1="9" x2="17" y2="15" />
+                                <line x1="17" y1="9" x2="23" y2="15" />
+                              </>
+                            )}
+                          </svg>
+                          <input
+                            type="range"
+                            min={0}
+                            max={1}
+                            step={0.05}
+                            value={o.audioVolume ?? 1}
+                            onChange={(e) => onUpdate(o.id, { audioVolume: +e.target.value })}
+                          />
+                          <span className="volume-value">{Math.round((o.audioVolume ?? 1) * 100)}%</span>
+                        </label>
+                      </div>
+                    )}
+
+                    <div className="control-group">
+                      <span className="control-label">{t.timelineColor || 'Timeline Color'}</span>
+                      <div className="color-picker-row">
+                        <input
+                          type="color"
+                          value={o.timelineColor || getDefaultColor(o.media.type)}
+                          onChange={(e) => onUpdate(o.id, { timelineColor: e.target.value })}
+                          className="timeline-color-input"
+                        />
+                        <span className="color-preview" style={{ backgroundColor: o.timelineColor || getDefaultColor(o.media.type) }}>
+                          {o.timelineColor || getDefaultColor(o.media.type)}
+                        </span>
+                      </div>
+                    </div>
+
                     {!isAudio && (
                       <div className="control-group">
                         <span className="control-label">{t.position}</span>
@@ -406,6 +463,42 @@ export function OverlayManager({ overlays, onAdd, onAddText, onAddAudio, onUpdat
                           />
                           <span>{Math.round(o.opacity * 100)}%</span>
                         </label>
+                      </div>
+                    )}
+
+                    {!isAudio && (
+                      <div className="control-group">
+                        <span className="control-label">{t.animation}</span>
+                        <div className="time-inputs">
+                          <div className="time-field">
+                            <span className="time-label">{t.fadeIn}</span>
+                            <div className="time-input-row">
+                              <input
+                                type="number"
+                                min={0}
+                                max={10}
+                                step={0.1}
+                                value={o.fadeInDuration ?? 0}
+                                onChange={(e) => onUpdate(o.id, { fadeInDuration: Math.max(0, +e.target.value) })}
+                              />
+                              <span className="time-display">s</span>
+                            </div>
+                          </div>
+                          <div className="time-field">
+                            <span className="time-label">{t.fadeOut}</span>
+                            <div className="time-input-row">
+                              <input
+                                type="number"
+                                min={0}
+                                max={10}
+                                step={0.1}
+                                value={o.fadeOutDuration ?? 0}
+                                onChange={(e) => onUpdate(o.id, { fadeOutDuration: Math.max(0, +e.target.value) })}
+                              />
+                              <span className="time-display">s</span>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     )}
 

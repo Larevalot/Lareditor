@@ -139,9 +139,10 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: 16px;
   background: var(--bg-primary);
   min-height: 0;
+  overflow: hidden;
 }
 
 .preview-container {
@@ -150,10 +151,13 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  max-height: 100%;
 }
 
 .preview-canvas {
   width: 100%;
+  max-height: calc(100vh - 200px);
+  object-fit: contain;
   border-radius: 8px;
   background: #000;
   border: 1px solid var(--border);
@@ -600,6 +604,33 @@
   font-style: italic;
 }
 
+.color-picker-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.timeline-color-input {
+  width: 40px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-primary);
+  cursor: pointer;
+}
+
+.color-preview {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
 .main-video-panel h3,
 .overlay-panel h3,
 .export-panel h3 {
@@ -689,6 +720,12 @@
 .btn-add-text:hover {
   border-color: var(--olive);
   color: var(--olive-light);
+}
+
+.export-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .btn-primary {
@@ -837,4 +874,123 @@
     flex: 1;
     min-width: 80px;
   }
+}
+
+/* Timeline Styles */
+.timeline-container {
+  width: 100%;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+}
+
+.timeline-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.timeline-current,
+.timeline-duration {
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-muted);
+}
+
+.timeline-track {
+  position: relative;
+  min-height: 40px;
+  height: auto;
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+  cursor: pointer;
+  overflow: visible;
+}
+
+.timeline-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: var(--olive-bg);
+  pointer-events: none;
+  border-radius: 4px;
+}
+
+.timeline-playhead {
+  position: absolute;
+  top: 0;
+  width: 2px;
+  height: 100%;
+  background: var(--olive);
+  transform: translateX(-50%);
+  pointer-events: none;
+  z-index: 10;
+}
+
+.timeline-overlay {
+  position: absolute;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  z-index: 5;
+}
+
+.timeline-overlay:hover {
+  opacity: 1 !important;
+}
+
+.timeline-overlay-label {
+  font-size: 9px;
+  color: white;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 8px;
+  pointer-events: none;
+}
+
+.timeline-handle {
+  position: absolute;
+  top: 0;
+  width: 6px;
+  height: 100%;
+  cursor: ew-resize;
+  background: rgba(255, 255, 255, 0.3);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.timeline-overlay:hover .timeline-handle {
+  opacity: 1;
+}
+
+.timeline-handle-start {
+  left: 0;
+  border-radius: 3px 0 0 3px;
+}
+
+.timeline-handle-end {
+  right: 0;
+  border-radius: 0 3px 3px 0;
+}
+
+.timeline-ticks {
+  position: relative;
+  height: 16px;
+  margin-top: 4px;
+}
+
+.timeline-tick {
+  position: absolute;
+  font-size: 9px;
+  color: var(--text-muted);
+  transform: translateX(-50%);
+  font-family: 'JetBrains Mono', monospace;
 }

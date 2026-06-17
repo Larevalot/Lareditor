@@ -1,83 +1,193 @@
-# LarEditor
+<div align="center">
 
-**A simple, fast, no-fuss video editor.**
+# [v] LarEditor
 
-For projects that don't need giant suites or hours of rendering. Open, edit, export.
+**A lightweight, browser-based video editor built with React and FFmpeg.wasm**
 
-[![Visit](https://img.shields.io/badge/🔴_Live-lareditor.vercel.app-1a1a1a?style=for-the-badge&labelColor=e8c547&color=1a1a1a)](https://lareditor.vercel.app/)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-lareditor.vercel.app-6B8E23?style=for-the-badge&logo=vercel&logoColor=white)](https://lareditor.vercel.app/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-6B8E23?style=for-the-badge)](https://opensource.org/licenses/MIT)
+[![TypeScript](https://img.shields.io/badge/TypeScript-6B8E23?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-6B8E23?style=for-the-badge&logo=react&logoColor=white)](https://react.dev/)
 
 ---
 
-## What is it
+A fast, no-nonsense video editor for quick edits.  
+No installation. No sign-up. Open and edit.
 
-LarEditor is a video editor built for when you need something quick: trim a clip, join fragments, adjust duration, add text or background music... without opening Premiere, DaVinci, or any tool that weighs more than your project.
-
-Perfect for:
-
-- **Social media** — Reels, TikToks, Shorts, Stories
-- **Quick prototypes** — Test an idea before producing it for real
-- **Presentations** — Simple videos for teams, classes, or demos
-- **Casual content** — Memes, compilations, screen recordings
-
-It's not a replacement for professional software. It's the scalpel when you don't need the operating room.
+</div>
 
 ---
 
 ## Features
 
-- **Clean interface** — No endless menus. What you need, right in front of you.
-- **Drag and drop** — Drop your video, image, and audio files directly.
-- **Text overlay** — Add titles and subtitles with style.
-- **Fast export** — Generate your final video without endless render queues.
-- **100% browser-based** — Nothing to install. Open the URL and start editing.
+### Video Editing
+- **Video Preview** — Real-time canvas-based preview with playback controls
+- **Volume Control** — Adjust main video volume with precision
+- **Multi-Track Timeline** — Set start and end times for each overlay element
+
+### Overlays
+- **Image Overlays** — Add images with full position, size, and opacity control
+- **Video Overlays** — Layer videos on top of your base video
+- **Text Overlays** — Customizable text with font, size, color, outline, and background options
+- **Audio Overlays** — Add audio tracks with independent volume control
+
+### Animations
+- **Fade In** — Smooth opacity transition from 0% to 100%
+- **Fade Out** — Smooth opacity transition from 100% to 0%
+- **Configurable Duration** — Set fade duration in seconds for each overlay
+
+### Export
+- **FFmpeg.wasm Processing** — Client-side video rendering using WebAssembly
+- **Progress Tracking** — Real-time export progress indicator
+- **Direct Download** — Download the final video as MP4
+
+### Interface
+- **Minimalist Design** — Clean olive, black, and white color palette
+- **Theme Support** — Green (default), Dark, and Light themes
+- **Multi-Language** — English, Spanish, and Italian translations
+- **Responsive Layout** — Optimized for desktop and mobile devices
+- **Drag & Drop** — Move overlays directly on the canvas
 
 ---
 
-## Getting started
-
-No complicated steps:
-1.Open 
-https://lareditor.vercel.app/
-2.Upload your video file (or multiple) or img
-3.Export when you're done
-No sign-up. No installation. No manual to read.
-
----
-
-## Tech stack
+## Tech Stack
 
 | Layer | Technology |
 |-------|------------|
-| Stack | Typescript / React |
-| Styling | CSS |
+| Framework | React 19 |
+| Language | TypeScript |
+| Build Tool | Vite |
+| Styling | CSS Variables |
+| Video Processing | FFmpeg.wasm |
 | Deployment | Vercel |
-| Processing | FFmpeg.wasm |
 
 ---
 
-## Local development
+## Getting Started
 
-To run it on your machine:
+### Prerequisites
 
-# Clone
+- [Node.js](https://nodejs.org/) (v18 or higher)
+- [pnpm](https://pnpm.io/) (recommended) or npm
+
+### Installation
+
+```bash
+# Clone the repository
 git clone https://github.com/your-username/lareditor.git
 cd lareditor
 
 # Install dependencies
 pnpm install
 
-# Dev server
+# Start development server
 pnpm dev
+```
+
+### Build for Production
+
+```bash
+# Type check and build
+pnpm build
+
+# Preview production build
+pnpm preview
+```
 
 ---
 
-## Philosophy
+## Project Structure
 
-LarEditor doesn't try to be After Effects. It tries to be that tool you open when you think "I just need to cut this and add some text" and you want to be editing in 10 seconds, not 10 minutes.
+```
+src/
+├── components/
+│   ├── AudioControls.tsx    # Audio file management
+│   ├── ExportPanel.tsx      # Render and download controls
+│   ├── MainVideo.tsx        # Volume and video settings
+│   ├── OverlayManager.tsx   # Overlay creation and editing
+│   ├── VideoPreview.tsx     # Canvas-based video preview
+│   └── VideoUploader.tsx    # File upload with drag & drop
+├── hooks/
+│   └── useFFmpeg.ts         # FFmpeg.wasm integration
+├── types/
+│   └── index.ts             # TypeScript interfaces
+├── i18n.ts                  # Multi-language translations
+├── App.tsx                  # Main application component
+├── App.css                  # Application styles
+└── index.css                # Global styles and themes
+```
+
+---
+
+## Usage
+
+1. **Upload Video** — Drag and drop or click to select your base video
+2. **Add Overlays** — Use the sidebar to add images, videos, text, or audio
+3. **Edit Properties** — Click on any overlay to adjust position, size, timing, and animations
+4. **Preview** — Use the playback controls to review your edits
+5. **Export** — Click "Render Video" and wait for processing
+6. **Download** — Click "Download Result" to save your edited video
+
+---
+
+## Keyboard Shortcuts
+
+| Action | Shortcut |
+|--------|----------|
+| Play/Pause | Click play button |
+| Seek | Drag timeline slider |
+| Move Overlay | Click and drag on canvas |
+
+---
+
+## Browser Compatibility
+
+LarEditor uses modern web APIs including:
+- WebAssembly (FFmpeg.wasm)
+- Canvas API
+- File API
+- Blob URLs
+
+Supported browsers:
+- Chrome 90+
+- Firefox 89+
+- Safari 15+
+- Edge 90+
+
+> **Note:** Mobile browsers may have limited performance due to FFmpeg.wasm resource requirements.
+
+---
+
+## Contributing
+
+Contributions are welcome! Please follow these steps:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+---
 
 ## License
 
-MIT — use it, modify it, share it.
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
 
+---
 
-Built for people who value their time more than their timelines.
+## Acknowledgments
+
+- [FFmpeg.wasm](https://github.com/ffmpegwasm/ffmpeg.wasm) — Client-side video processing
+- [Vite](https://vitejs.dev/) — Fast build tooling
+- [React](https://react.dev/) — UI framework
+
+---
+
+<div align="center">
+
+**Built with care for people who value their time**
+
+[Report Bug](https://github.com/your-username/lareditor/issues) · [Request Feature](https://github.com/your-username/lareditor/issues)
+
+</div>

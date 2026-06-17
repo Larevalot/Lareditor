@@ -25,6 +25,9 @@ export interface OverlayItem {
   outlineWidth?: number;
   textAlign?: 'left' | 'center' | 'right';
   audioVolume?: number;
+  fadeInDuration?: number;
+  fadeOutDuration?: number;
+  timelineColor?: string;
 }
 
 export interface ProjectState {

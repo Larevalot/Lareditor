@@ -154,6 +154,8 @@ function App() {
           outlineColor: o.outlineColor,
           outlineWidth: o.outlineWidth,
           audioVolume: o.audioVolume,
+          fadeInDuration: o.fadeInDuration,
+          fadeOutDuration: o.fadeOutDuration,
         }));
 
       const blob = await mergeVideoWithOverlay(
@@ -195,7 +197,7 @@ function App() {
         <div className="logo">
           <span className="logo-mark">[v]</span>
           <h1>larEditor</h1>
-          <span className="version-badge">v0.0.3</span>
+          <span className="version-badge">v0.1.0</span>
         </div>
         <div className="header-actions">
           <button className="btn-header" onClick={cycleTheme} title={t.theme}>

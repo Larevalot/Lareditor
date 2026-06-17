@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState } from 'react';
+import { Timeline } from './Timeline';
 import type { OverlayItem } from '../types';
 
 interface Translations {
@@ -18,7 +19,7 @@ export function VideoPreview({ videoUrl, overlays, volume, onOverlayUpdate, onDu
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number>(0);
-  const drawFrameRef = useRef<() => void>(() => {});
+  const overlayVideosRef = useRef<Map<string, HTMLVideoElement>>(new Map());
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -48,6 +49,9 @@ export function VideoPreview({ videoUrl, overlays, volume, onOverlayUpdate, onDu
     const onEnded = () => {
       setIsPlaying(false);
       cancelAnimationFrame(animRef.current);
+      overlayVideosRef.current.forEach((vid) => {
+        vid.pause();
+      });
     };
 
     video.addEventListener('loadedmetadata', onLoaded);
@@ -92,7 +96,19 @@ export function VideoPreview({ videoUrl, overlays, volume, onOverlayUpdate, onDu
         if (!overlay.visible) return;
         if (time < overlay.startTime || time > overlay.endTime) return;
 
-        ctx.globalAlpha = overlay.opacity;
+        let currentOpacity = overlay.opacity;
+        const fadeInDur = overlay.fadeInDuration ?? 0;
+        const fadeOutDur = overlay.fadeOutDuration ?? 0;
+
+        if (fadeInDur > 0 && time < overlay.startTime + fadeInDur) {
+          const progress = (time - overlay.startTime) / fadeInDur;
+          currentOpacity = overlay.opacity * Math.min(1, Math.max(0, progress));
+        } else if (fadeOutDur > 0 && time > overlay.endTime - fadeOutDur) {
+          const progress = (overlay.endTime - time) / fadeOutDur;
+          currentOpacity = overlay.opacity * Math.min(1, Math.max(0, progress));
+        }
+
+        ctx.globalAlpha = currentOpacity;
 
         if (overlay.media.type === 'text') {
           const fontSize = overlay.fontSize || 48;
@@ -134,44 +150,86 @@ export function VideoPreview({ videoUrl, overlays, volume, onOverlayUpdate, onDu
             img.src = overlay.media.url;
             img.style.position = 'absolute';
             img.style.left = '-9999px';
-            img.onload = () => drawFrameRef.current?.();
+            img.onload = () => {
+              if (!isPlaying) drawFrame();
+            };
             document.body.appendChild(img);
           }
           if (img.complete && img.naturalWidth > 0) {
             ctx.drawImage(img, overlay.x, overlay.y, overlay.width, overlay.height);
           }
-        } else {
-          const existing = document.getElementById(`ov-vid-${overlay.id}`) as HTMLVideoElement | null;
-          let vid = existing;
+        } else if (overlay.media.type === 'video') {
+          let vid = overlayVideosRef.current.get(overlay.id);
           if (!vid) {
             vid = document.createElement('video');
             vid.id = `ov-vid-${overlay.id}`;
             vid.src = overlay.media.url;
-            vid.muted = true;
-            vid.loop = true;
+            vid.muted = false;
+            vid.loop = false;
+            vid.preload = 'auto';
             vid.style.position = 'absolute';
             vid.style.left = '-9999px';
             document.body.appendChild(vid);
-            vid.play().catch(() => {});
+            overlayVideosRef.current.set(overlay.id, vid);
           }
-          ctx.drawImage(vid, overlay.x, overlay.y, overlay.width, overlay.height);
+
+          vid.volume = overlay.audioVolume ?? 1;
+
+          const overlayTime = time - overlay.startTime;
+          if (overlayTime >= 0 && vid.duration > 0) {
+            const clampedTime = overlayTime % vid.duration;
+            if (Math.abs(vid.currentTime - clampedTime) > 0.3) {
+              vid.currentTime = clampedTime;
+            }
+            if (isPlaying && vid.paused) {
+              vid.play().catch(() => {});
+            } else if (!isPlaying && !vid.paused) {
+              vid.pause();
+            }
+          }
+
+          if (vid.readyState >= 2) {
+            ctx.drawImage(vid, overlay.x, overlay.y, overlay.width, overlay.height);
+          }
         }
 
         ctx.globalAlpha = 1;
       });
     };
 
-    drawFrameRef.current = drawFrame;
+    const onSeeked = () => {
+      overlayVideosRef.current.forEach((vid, id) => {
+        const overlay = overlays.find(o => o.id === id);
+        if (overlay && overlay.media.type === 'video') {
+          const overlayTime = video.currentTime - overlay.startTime;
+          if (overlayTime >= 0 && vid.duration > 0) {
+            vid.currentTime = overlayTime % vid.duration;
+          }
+        }
+      });
+      drawFrame();
+    };
 
-    const onSeeked = () => drawFrame();
     const onPlay = () => {
+      overlayVideosRef.current.forEach((vid, id) => {
+        const overlay = overlays.find(o => o.id === id);
+        if (overlay && video.currentTime >= overlay.startTime && video.currentTime <= overlay.endTime) {
+          vid.play().catch(() => {});
+        }
+      });
       const tick = () => {
         drawFrame();
         animRef.current = requestAnimationFrame(tick);
       };
       animRef.current = requestAnimationFrame(tick);
     };
-    const onPause = () => cancelAnimationFrame(animRef.current);
+
+    const onPause = () => {
+      overlayVideosRef.current.forEach((vid) => {
+        vid.pause();
+      });
+      cancelAnimationFrame(animRef.current);
+    };
 
     video.addEventListener('seeked', onSeeked);
     video.addEventListener('play', onPlay);
@@ -193,31 +251,16 @@ export function VideoPreview({ videoUrl, overlays, volume, onOverlayUpdate, onDu
     }
   }, [volume]);
 
-  const togglePlay = () => {
-    const video = videoRef.current;
-    if (!video || !videoReady) return;
-    if (isPlaying) {
-      video.pause();
-    } else {
-      video.play().catch(() => {});
-    }
-    setIsPlaying(!isPlaying);
-  };
-
-  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const video = videoRef.current;
-    if (!video) return;
-    const time = parseFloat(e.target.value);
-    video.currentTime = time;
-    setCurrentTime(time);
-  };
-
-  const formatTime = (s: number) => {
-    if (!isFinite(s) || s < 0) return '0:00';
-    const min = Math.floor(s / 60);
-    const sec = Math.floor(s % 60);
-    return `${min}:${sec.toString().padStart(2, '0')}`;
-  };
+  useEffect(() => {
+    const overlayVideos = overlayVideosRef.current;
+    return () => {
+      overlayVideos.forEach((vid) => {
+        vid.pause();
+        vid.src = '';
+      });
+      overlayVideos.clear();
+    };
+  }, []);
 
   const getCanvasCoords = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
@@ -305,32 +348,40 @@ export function VideoPreview({ videoUrl, overlays, volume, onOverlayUpdate, onDu
         onMouseLeave={handleMouseUp}
         style={{ cursor: dragging ? 'grabbing' : 'default' }}
       />
-      <div className="preview-controls">
-        <button className="btn-play" onClick={togglePlay} disabled={!videoReady}>
-          {isPlaying ? (
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <rect x="6" y="4" width="4" height="16" />
-              <rect x="14" y="4" width="4" height="16" />
-            </svg>
-          ) : (
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <polygon points="5 3 19 12 5 21 5 3" />
-            </svg>
-          )}
-        </button>
-        <span className="time">{formatTime(currentTime)}</span>
-        <input
-          type="range"
-          className="seek-bar"
-          min={0}
-          max={duration || 0}
-          step={0.1}
-          value={currentTime}
-          onChange={handleSeek}
-          disabled={!videoReady}
-        />
-        <span className="time">{formatTime(duration)}</span>
-      </div>
+      <Timeline
+        duration={duration}
+        currentTime={currentTime}
+        overlays={overlays}
+        isPlaying={isPlaying}
+        onSeek={(time) => {
+          const video = videoRef.current;
+          if (video) {
+            video.currentTime = time;
+            setCurrentTime(time);
+          }
+        }}
+        onTogglePlay={() => {
+          const video = videoRef.current;
+          if (!video || !videoReady) return;
+          if (isPlaying) {
+            video.pause();
+            overlayVideosRef.current.forEach((vid) => {
+              vid.pause();
+            });
+          } else {
+            video.play().catch(() => {});
+            const time = video.currentTime;
+            overlayVideosRef.current.forEach((vid, id) => {
+              const overlay = overlays.find(o => o.id === id);
+              if (overlay && overlay.media.type === 'video' && time >= overlay.startTime && time <= overlay.endTime) {
+                vid.play().catch(() => {});
+              }
+            });
+          }
+          setIsPlaying(!isPlaying);
+        }}
+        onOverlayUpdate={onOverlayUpdate || (() => {})}
+      />
     </div>
   );
 }

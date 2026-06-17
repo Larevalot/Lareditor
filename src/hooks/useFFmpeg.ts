@@ -19,6 +19,8 @@ export interface OverlayData {
   outlineColor?: string;
   outlineWidth?: number;
   audioVolume?: number;
+  fadeInDuration?: number;
+  fadeOutDuration?: number;
 }
 
 interface ProcessedOverlay {
@@ -30,6 +32,9 @@ interface ProcessedOverlay {
   height: number;
   startTime: number;
   endTime: number;
+  fadeInDuration: number;
+  fadeOutDuration: number;
+  audioVolume?: number;
 }
 
 interface ProcessedAudio {
@@ -38,6 +43,7 @@ interface ProcessedAudio {
   startTime: number;
   endTime: number;
   volume: number;
+  inputIdx?: number;
 }
 
 export function useFFmpeg() {
@@ -136,6 +142,8 @@ export function useFFmpeg() {
             height,
             startTime: ov.startTime,
             endTime: ov.endTime,
+            fadeInDuration: ov.fadeInDuration ?? 0,
+            fadeOutDuration: ov.fadeOutDuration ?? 0,
           });
         } else if (ov.file) {
           const data = new Uint8Array(await ov.file.arrayBuffer());
@@ -148,6 +156,9 @@ export function useFFmpeg() {
             height: ov.height,
             startTime: ov.startTime,
             endTime: ov.endTime,
+            fadeInDuration: ov.fadeInDuration ?? 0,
+            fadeOutDuration: ov.fadeOutDuration ?? 0,
+            audioVolume: ov.type === 'video' ? (ov.audioVolume ?? 1) : undefined,
           });
         }
       }
@@ -172,7 +183,10 @@ export function useFFmpeg() {
       const args = [...inputArgs];
 
       const hasVisuals = visualOverlays.length > 0;
-      const hasAudio = audioOverlays.length > 0;
+      const hasStandaloneAudio = audioOverlays.length > 0;
+      const videoOverlaysWithAudio = visualOverlays.filter(ov => ov.type === 'video' && ov.audioVolume !== undefined && ov.audioVolume > 0);
+      const hasVideoOverlayAudio = videoOverlaysWithAudio.length > 0;
+      const hasAnyAudio = hasStandaloneAudio || hasVideoOverlayAudio;
 
       if (hasVisuals) {
         const filter = buildVideoFilter(visualOverlays);
@@ -180,8 +194,8 @@ export function useFFmpeg() {
         args.push('-map', '[vout]');
       }
 
-      if (hasAudio) {
-        const audioFilter = buildAudioFilter(audioOverlays, visualOverlays.length);
+      if (hasAnyAudio) {
+        const audioFilter = buildAudioFilter(audioOverlays, visualOverlays.length, videoOverlaysWithAudio);
         if (hasVisuals) {
           const existingFilter = args[args.indexOf('-filter_complex') + 1];
           args[args.indexOf('-filter_complex') + 1] = existingFilter + ';' + audioFilter;
@@ -223,7 +237,19 @@ function buildVideoFilter(overlays: ProcessedOverlay[]): string {
     const outLabel = isLast ? 'vout' : `t${idx}`;
     const enable = `between(t\\,${ov.startTime}\\,${ov.endTime})`;
 
-    parts.push(`[${idx}:v]scale=${ov.width}:${ov.height},setsar=1[ol${idx}]`);
+    let overlayInput = `[${idx}:v]scale=${ov.width}:${ov.height},setsar=1`;
+
+    if (ov.fadeInDuration > 0) {
+      overlayInput += `,fade=t=in:st=${ov.startTime}:d=${ov.fadeInDuration}:alpha=1`;
+    }
+    if (ov.fadeOutDuration > 0) {
+      const fadeOutStart = ov.endTime - ov.fadeOutDuration;
+      overlayInput += `,fade=t=out:st=${fadeOutStart}:d=${ov.fadeOutDuration}:alpha=1`;
+    }
+
+    overlayInput += `[ol${idx}]`;
+    parts.push(overlayInput);
+
     if (ov.type === 'image') {
       parts.push(`[${prev}][ol${idx}]overlay=${ov.x}:${ov.y}:enable='${enable}'[${outLabel}]`);
     } else {
@@ -235,7 +261,7 @@ function buildVideoFilter(overlays: ProcessedOverlay[]): string {
   return parts.join(';');
 }
 
-function buildAudioFilter(audios: ProcessedAudio[], visualCount: number): string {
+function buildAudioFilter(audios: ProcessedAudio[], visualCount: number, videoOverlays: ProcessedOverlay[]): string {
   const parts: string[] = [];
   const audioInputs: string[] = ['0:a'];
 
@@ -246,6 +272,18 @@ function buildAudioFilter(audios: ProcessedAudio[], visualCount: number): string
 
     const volFilter = `volume=${au.volume}`;
     const enableFilter = `aeval=0:enable='between(t\\,${au.startTime}\\,${au.endTime})'`;
+
+    parts.push(`[${inputIdx}:a]${volFilter},${enableFilter}[${label}]`);
+    audioInputs.push(`[${label}]`);
+  }
+
+  for (let i = 0; i < videoOverlays.length; i++) {
+    const ov = videoOverlays[i];
+    const inputIdx = ov.type === 'video' ? videoOverlays.indexOf(ov) + 1 : -1;
+    if (inputIdx < 0) continue;
+    const label = `vau${i}`;
+    const volFilter = `volume=${ov.audioVolume ?? 1}`;
+    const enableFilter = `aeval=0:enable='between(t\\,${ov.startTime}\\,${ov.endTime})'`;
 
     parts.push(`[${inputIdx}:a]${volFilter},${enableFilter}[${label}]`);
     audioInputs.push(`[${label}]`);
