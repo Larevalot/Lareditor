@@ -1,73 +1,83 @@
-# React + TypeScript + Vite
+# LarEditor
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**A simple, fast, no-fuss video editor.**
 
-Currently, two official plugins are available:
+For projects that don't need giant suites or hours of rendering. Open, edit, export.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+[![Visit](https://img.shields.io/badge/🔴_Live-lareditor.vercel.app-1a1a1a?style=for-the-badge&labelColor=e8c547&color=1a1a1a)](https://lareditor.vercel.app/)
 
-## React Compiler
+---
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## What is it
 
-## Expanding the ESLint configuration
+LarEditor is a video editor built for when you need something quick: trim a clip, join fragments, adjust duration, add text or background music... without opening Premiere, DaVinci, or any tool that weighs more than your project.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Perfect for:
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- **Social media** — Reels, TikToks, Shorts, Stories
+- **Quick prototypes** — Test an idea before producing it for real
+- **Presentations** — Simple videos for teams, classes, or demos
+- **Casual content** — Memes, compilations, screen recordings
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+It's not a replacement for professional software. It's the scalpel when you don't need the operating room.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+---
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Features
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- **Clean interface** — No endless menus. What you need, right in front of you.
+- **Drag and drop** — Drop your video, image, and audio files directly.
+- **Text overlay** — Add titles and subtitles with style.
+- **Fast export** — Generate your final video without endless render queues.
+- **100% browser-based** — Nothing to install. Open the URL and start editing.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+---
+
+## Getting started
+
+No complicated steps:
+1.Open 
+https://lareditor.vercel.app/
+2.Upload your video file (or multiple) or img
+3.Export when you're done
+No sign-up. No installation. No manual to read.
+
+---
+
+## Tech stack
+
+| Layer | Technology |
+|-------|------------|
+| Stack | Typescript / React |
+| Styling | CSS |
+| Deployment | Vercel |
+| Processing | FFmpeg.wasm |
+
+---
+
+## Local development
+
+To run it on your machine:
+
+# Clone
+git clone https://github.com/your-username/lareditor.git
+cd lareditor
+
+# Install dependencies
+pnpm install
+
+# Dev server
+pnpm dev
+
+---
+
+## Philosophy
+
+LarEditor doesn't try to be After Effects. It tries to be that tool you open when you think "I just need to cut this and add some text" and you want to be editing in 10 seconds, not 10 minutes.
+
+## License
+
+MIT — use it, modify it, share it.
+
+
+Built for people who value their time more than their timelines.
