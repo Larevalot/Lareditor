@@ -29,6 +29,7 @@ function App() {
   const [baseVideo, setBaseVideo] = useState<MediaFile | null>(null);
   const [overlays, setOverlays] = useState<OverlayItem[]>([]);
   const [volume, setVolume] = useState(1);
+  const [videoDuration, setVideoDuration] = useState(30);
   const [isExporting, setIsExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);
   const [resultBlob, setResultBlob] = useState<Blob | null>(null);
@@ -51,6 +52,10 @@ function App() {
     }
   }, [loaded, loading, load]);
 
+  const handleDurationChange = useCallback((duration: number) => {
+    setVideoDuration(duration);
+  }, []);
+
   const handleAddOverlay = useCallback((media: MediaFile) => {
     const newOverlay: OverlayItem = {
       id: crypto.randomUUID(),
@@ -61,11 +66,11 @@ function App() {
       height: 180,
       opacity: 1,
       startTime: 0,
-      endTime: 30,
+      endTime: videoDuration,
       visible: true,
     };
     setOverlays((prev) => [...prev, newOverlay]);
-  }, []);
+  }, [videoDuration]);
 
   const handleAddTextOverlay = useCallback((text: string, config: Partial<OverlayItem>) => {
     const newOverlay: OverlayItem = {
@@ -77,7 +82,7 @@ function App() {
       height: 0,
       opacity: 1,
       startTime: 0,
-      endTime: 30,
+      endTime: videoDuration,
       visible: true,
       text,
       fontFamily: config.fontFamily || 'Arial',
@@ -88,7 +93,7 @@ function App() {
       outlineWidth: config.outlineWidth || 0,
     };
     setOverlays((prev) => [...prev, newOverlay]);
-  }, []);
+  }, [videoDuration]);
 
   const handleAddAudioOverlay = useCallback((media: MediaFile) => {
     const newOverlay: OverlayItem = {
@@ -100,12 +105,12 @@ function App() {
       height: 0,
       opacity: 1,
       startTime: 0,
-      endTime: 30,
+      endTime: videoDuration,
       visible: true,
       audioVolume: 1,
     };
     setOverlays((prev) => [...prev, newOverlay]);
-  }, []);
+  }, [videoDuration]);
 
   const handleUpdateOverlay = useCallback((id: string, updates: Partial<OverlayItem>) => {
     setOverlays((prev) =>
@@ -255,6 +260,7 @@ function App() {
             overlays={overlays}
             volume={volume}
             onOverlayUpdate={handleUpdateOverlay}
+            onDurationChange={handleDurationChange}
             t={t}
           />
           {!baseVideo && (

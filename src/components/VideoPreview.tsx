@@ -10,10 +10,11 @@ interface Props {
   overlays: OverlayItem[];
   volume: number;
   onOverlayUpdate?: (id: string, updates: Partial<OverlayItem>) => void;
+  onDurationChange?: (duration: number) => void;
   t: Translations;
 }
 
-export function VideoPreview({ videoUrl, overlays, volume, onOverlayUpdate, t }: Props) {
+export function VideoPreview({ videoUrl, overlays, volume, onOverlayUpdate, onDurationChange, t }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number>(0);
@@ -37,6 +38,7 @@ export function VideoPreview({ videoUrl, overlays, volume, onOverlayUpdate, t }:
     const onLoaded = () => {
       setDuration(video.duration);
       setVideoReady(true);
+      onDurationChange?.(video.duration);
     };
 
     const onTimeUpdate = () => {
