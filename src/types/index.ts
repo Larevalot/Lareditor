@@ -1,7 +1,7 @@
 export interface MediaFile {
   file: File | null;
   url: string;
-  type: 'video' | 'image' | 'text';
+  type: 'video' | 'image' | 'text' | 'audio';
   name: string;
 }
 
@@ -24,6 +24,7 @@ export interface OverlayItem {
   outlineColor?: string;
   outlineWidth?: number;
   textAlign?: 'left' | 'center' | 'right';
+  audioVolume?: number;
 }
 
 export interface ProjectState {

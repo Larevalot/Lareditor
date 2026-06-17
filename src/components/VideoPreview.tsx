@@ -8,12 +8,12 @@ interface Translations {
 interface Props {
   videoUrl: string | null;
   overlays: OverlayItem[];
-  audioEnabled: boolean;
+  volume: number;
   onOverlayUpdate?: (id: string, updates: Partial<OverlayItem>) => void;
   t: Translations;
 }
 
-export function VideoPreview({ videoUrl, overlays, audioEnabled, onOverlayUpdate, t }: Props) {
+export function VideoPreview({ videoUrl, overlays, volume, onOverlayUpdate, t }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number>(0);
@@ -187,9 +187,9 @@ export function VideoPreview({ videoUrl, overlays, audioEnabled, onOverlayUpdate
 
   useEffect(() => {
     if (videoRef.current) {
-      videoRef.current.muted = !audioEnabled;
+      videoRef.current.volume = volume;
     }
-  }, [audioEnabled]);
+  }, [volume]);
 
   const togglePlay = () => {
     const video = videoRef.current;

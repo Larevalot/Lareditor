@@ -13,4 +13,7 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['@ffmpeg/ffmpeg', '@ffmpeg/util'],
   },
+  css: {
+    transformer: 'postcss',
+  },
 })

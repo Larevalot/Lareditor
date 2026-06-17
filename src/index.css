@@ -80,6 +80,7 @@
 body {
   min-height: 100vh;
   overflow-x: hidden;
+  font-family: 'Montserrat', system-ui, -apple-system, sans-serif;
 }
 
 #root {
@@ -158,4 +159,13 @@ a {
 
 a:hover {
   text-decoration: underline;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }

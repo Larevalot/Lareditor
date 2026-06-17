@@ -4,7 +4,7 @@ import { toBlobURL } from '@ffmpeg/util';
 
 export interface OverlayData {
   file: File | null;
-  type: 'image' | 'video' | 'text';
+  type: 'image' | 'video' | 'text' | 'audio';
   x: number;
   y: number;
   width: number;
@@ -18,6 +18,7 @@ export interface OverlayData {
   backgroundColor?: string;
   outlineColor?: string;
   outlineWidth?: number;
+  audioVolume?: number;
 }
 
 interface ProcessedOverlay {
@@ -29,6 +30,14 @@ interface ProcessedOverlay {
   height: number;
   startTime: number;
   endTime: number;
+}
+
+interface ProcessedAudio {
+  data: Uint8Array;
+  ext: string;
+  startTime: number;
+  endTime: number;
+  volume: number;
 }
 
 export function useFFmpeg() {
@@ -82,8 +91,6 @@ export function useFFmpeg() {
   const mergeVideoWithOverlay = useCallback(async (
     baseVideo: File,
     overlays: OverlayData[],
-    audioFile: File | null,
-    audioEnabled: boolean,
     onProgress?: (progress: number) => void
   ): Promise<Blob> => {
     if (!ffmpegRef.current) throw new Error('FFmpeg not loaded');
@@ -94,22 +101,33 @@ export function useFFmpeg() {
     };
     ffmpeg.on('progress', progressHandler);
 
-    const overlayFiles: string[] = [];
-    let audioFileName = '';
+    const writtenFiles: string[] = [];
 
     try {
       const baseData = new Uint8Array(await baseVideo.arrayBuffer());
       await ffmpeg.writeFile('base.mp4', baseData);
+      writtenFiles.push('base.mp4');
 
       const inputArgs: string[] = ['-i', 'base.mp4'];
       let inputIdx = 1;
 
-      const processedOverlays: ProcessedOverlay[] = [];
+      const visualOverlays: ProcessedOverlay[] = [];
+      const audioOverlays: ProcessedAudio[] = [];
 
       for (const ov of overlays) {
-        if (ov.type === 'text') {
+        if (ov.type === 'audio' && ov.file) {
+          const data = new Uint8Array(await ov.file.arrayBuffer());
+          const ext = ov.file.name.split('.').pop() || 'mp3';
+          audioOverlays.push({
+            data,
+            ext,
+            startTime: ov.startTime,
+            endTime: ov.endTime,
+            volume: ov.audioVolume ?? 1,
+          });
+        } else if (ov.type === 'text') {
           const { data, width, height } = await renderTextToPng(ov);
-          processedOverlays.push({
+          visualOverlays.push({
             data,
             type: 'image',
             x: ov.x,
@@ -121,7 +139,7 @@ export function useFFmpeg() {
           });
         } else if (ov.file) {
           const data = new Uint8Array(await ov.file.arrayBuffer());
-          processedOverlays.push({
+          visualOverlays.push({
             data,
             type: ov.type as 'image' | 'video',
             x: ov.x,
@@ -134,37 +152,44 @@ export function useFFmpeg() {
         }
       }
 
-      for (const ov of processedOverlays) {
+      for (const ov of visualOverlays) {
         const ext = ov.type === 'image' ? 'png' : 'mp4';
         const fname = `ov${inputIdx}.${ext}`;
         await ffmpeg.writeFile(fname, ov.data);
         inputArgs.push('-i', fname);
-        overlayFiles.push(fname);
+        writtenFiles.push(fname);
         inputIdx++;
       }
 
-      if (audioFile && audioEnabled) {
-        const audioData = new Uint8Array(await audioFile.arrayBuffer());
-        const ext = audioFile.name.split('.').pop() || 'mp3';
-        audioFileName = `audio.${ext}`;
-        await ffmpeg.writeFile(audioFileName, audioData);
-        inputArgs.push('-i', audioFileName);
+      for (const au of audioOverlays) {
+        const fname = `au${inputIdx}.${au.ext}`;
+        await ffmpeg.writeFile(fname, au.data);
+        inputArgs.push('-i', fname);
+        writtenFiles.push(fname);
+        inputIdx++;
       }
 
       const args = [...inputArgs];
 
-      if (processedOverlays.length > 0) {
-        const filter = buildFilter(processedOverlays);
+      const hasVisuals = visualOverlays.length > 0;
+      const hasAudio = audioOverlays.length > 0;
+
+      if (hasVisuals) {
+        const filter = buildVideoFilter(visualOverlays);
         args.push('-filter_complex', filter);
         args.push('-map', '[vout]');
       }
 
-      if (audioFile && audioEnabled) {
-        const audioIdx = inputIdx;
-        args.push('-map', `${audioIdx}:a`);
+      if (hasAudio) {
+        const audioFilter = buildAudioFilter(audioOverlays, visualOverlays.length);
+        if (hasVisuals) {
+          const existingFilter = args[args.indexOf('-filter_complex') + 1];
+          args[args.indexOf('-filter_complex') + 1] = existingFilter + ';' + audioFilter;
+        } else {
+          args.push('-filter_complex', audioFilter);
+        }
+        args.push('-map', '[aout]');
         args.push('-shortest');
-      } else if (!audioEnabled) {
-        args.push('-an');
       } else {
         args.push('-map', '0:a?');
       }
@@ -178,9 +203,7 @@ export function useFFmpeg() {
       onProgress?.(100);
       return new Blob([result as unknown as BlobPart], { type: 'video/mp4' });
     } finally {
-      await safeDelete(ffmpeg, 'base.mp4');
-      for (const f of overlayFiles) await safeDelete(ffmpeg, f);
-      if (audioFileName) await safeDelete(ffmpeg, audioFileName);
+      for (const f of writtenFiles) await safeDelete(ffmpeg, f);
       await safeDelete(ffmpeg, 'out.mp4');
       ffmpeg.off('progress', progressHandler);
     }
@@ -189,7 +212,7 @@ export function useFFmpeg() {
   return { load, loaded, loading, error, removeAudio, mergeVideoWithOverlay };
 }
 
-function buildFilter(overlays: ProcessedOverlay[]): string {
+function buildVideoFilter(overlays: ProcessedOverlay[]): string {
   const parts: string[] = [];
   let prev = '0:v';
 
@@ -207,6 +230,31 @@ function buildFilter(overlays: ProcessedOverlay[]): string {
       parts.push(`[${prev}][ol${idx}]overlay=${ov.x}:${ov.y}:enable='${enable}':shortest=1[${outLabel}]`);
     }
     prev = outLabel;
+  }
+
+  return parts.join(';');
+}
+
+function buildAudioFilter(audios: ProcessedAudio[], visualCount: number): string {
+  const parts: string[] = [];
+  const audioInputs: string[] = ['0:a'];
+
+  for (let i = 0; i < audios.length; i++) {
+    const au = audios[i];
+    const inputIdx = visualCount + i + 1;
+    const label = `au${i}`;
+
+    const volFilter = `volume=${au.volume}`;
+    const enableFilter = `aeval=0:enable='between(t\\,${au.startTime}\\,${au.endTime})'`;
+
+    parts.push(`[${inputIdx}:a]${volFilter},${enableFilter}[${label}]`);
+    audioInputs.push(`[${label}]`);
+  }
+
+  if (audioInputs.length > 1) {
+    parts.push(`${audioInputs.join()}amix=inputs=${audioInputs.length}:duration=longest[aout]`);
+  } else {
+    parts.push(`[0:a]acopy[aout]`);
   }
 
   return parts.join(';');

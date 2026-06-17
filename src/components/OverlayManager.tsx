@@ -19,12 +19,13 @@ interface Props {
   overlays: OverlayItem[];
   onAdd: (media: MediaFile) => void;
   onAddText: (text: string, config: Partial<OverlayItem>) => void;
+  onAddAudio: (media: MediaFile) => void;
   onUpdate: (id: string, updates: Partial<OverlayItem>) => void;
   onRemove: (id: string) => void;
   t: Translations;
 }
 
-export function OverlayManager({ overlays, onAdd, onAddText, onUpdate, onRemove, t }: Props) {
+export function OverlayManager({ overlays, onAdd, onAddText, onAddAudio, onUpdate, onRemove, t }: Props) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showTextForm, setShowTextForm] = useState(false);
   const [textValue, setTextValue] = useState('Text');
@@ -81,6 +82,12 @@ export function OverlayManager({ overlays, onAdd, onAddText, onUpdate, onRemove,
           </svg>
           {t.text}
         </button>
+        <VideoUploader
+          label={t.audio}
+          accept="audio/*"
+          onFileSelect={onAddAudio}
+          compact
+        />
       </div>
 
       {showTextForm && (
@@ -161,6 +168,7 @@ export function OverlayManager({ overlays, onAdd, onAddText, onUpdate, onRemove,
         <div className="overlay-list">
           {overlays.map((o) => {
             const isExpanded = expandedId === o.id;
+            const isAudio = o.media.type === 'audio';
             return (
               <div
                 key={o.id}
@@ -174,7 +182,7 @@ export function OverlayManager({ overlays, onAdd, onAddText, onUpdate, onRemove,
                     {isExpanded ? '▼' : '▶'}
                   </span>
                   <span className="overlay-type-badge">
-                    {o.media.type === 'image' ? 'IMG' : o.media.type === 'video' ? 'VID' : 'TXT'}
+                    {o.media.type === 'image' ? 'IMG' : o.media.type === 'video' ? 'VID' : o.media.type === 'audio' ? 'AUD' : 'TXT'}
                   </span>
                   <span className="overlay-name">
                     {o.media.type === 'text' ? o.text : o.media.name}
@@ -292,35 +300,69 @@ export function OverlayManager({ overlays, onAdd, onAddText, onUpdate, onRemove,
                       </div>
                     )}
 
-                    <div className="control-group">
-                      <span className="control-label">{t.position}</span>
-                      <div className="control-row">
-                        <label>
-                          X
+                    {isAudio && (
+                      <div className="control-group">
+                        <span className="control-label">{t.volume}</span>
+                        <label className="volume-label">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                            {(o.audioVolume ?? 1) > 0 ? (
+                              (o.audioVolume ?? 1) > 0.5 ? (
+                                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
+                              ) : (
+                                <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                              )
+                            ) : (
+                              <>
+                                <line x1="23" y1="9" x2="17" y2="15" />
+                                <line x1="17" y1="9" x2="23" y2="15" />
+                              </>
+                            )}
+                          </svg>
                           <input
                             type="range"
                             min={0}
-                            max={1920}
-                            value={o.x}
-                            onChange={(e) => onUpdate(o.id, { x: +e.target.value })}
+                            max={1}
+                            step={0.05}
+                            value={o.audioVolume ?? 1}
+                            onChange={(e) => onUpdate(o.id, { audioVolume: +e.target.value })}
                           />
-                          <span>{o.x}</span>
-                        </label>
-                        <label>
-                          Y
-                          <input
-                            type="range"
-                            min={0}
-                            max={1080}
-                            value={o.y}
-                            onChange={(e) => onUpdate(o.id, { y: +e.target.value })}
-                          />
-                          <span>{o.y}</span>
+                          <span className="volume-value">{Math.round((o.audioVolume ?? 1) * 100)}%</span>
                         </label>
                       </div>
-                    </div>
+                    )}
 
-                    {o.media.type !== 'text' && (
+                    {!isAudio && (
+                      <div className="control-group">
+                        <span className="control-label">{t.position}</span>
+                        <div className="control-row">
+                          <label>
+                            X
+                            <input
+                              type="range"
+                              min={0}
+                              max={1920}
+                              value={o.x}
+                              onChange={(e) => onUpdate(o.id, { x: +e.target.value })}
+                            />
+                            <span>{o.x}</span>
+                          </label>
+                          <label>
+                            Y
+                            <input
+                              type="range"
+                              min={0}
+                              max={1080}
+                              value={o.y}
+                              onChange={(e) => onUpdate(o.id, { y: +e.target.value })}
+                            />
+                            <span>{o.y}</span>
+                          </label>
+                        </div>
+                      </div>
+                    )}
+
+                    {o.media.type === 'image' || o.media.type === 'video' ? (
                       <div className="control-group">
                         <span className="control-label">{t.size}</span>
                         <div className="control-row">
@@ -348,22 +390,24 @@ export function OverlayManager({ overlays, onAdd, onAddText, onUpdate, onRemove,
                           </label>
                         </div>
                       </div>
-                    )}
+                    ) : null}
 
-                    <div className="control-group">
-                      <span className="control-label">{t.opacity}</span>
-                      <label>
-                        <input
-                          type="range"
-                          min={0}
-                          max={1}
-                          step={0.05}
-                          value={o.opacity}
-                          onChange={(e) => onUpdate(o.id, { opacity: +e.target.value })}
-                        />
-                        <span>{Math.round(o.opacity * 100)}%</span>
-                      </label>
-                    </div>
+                    {!isAudio && (
+                      <div className="control-group">
+                        <span className="control-label">{t.opacity}</span>
+                        <label>
+                          <input
+                            type="range"
+                            min={0}
+                            max={1}
+                            step={0.05}
+                            value={o.opacity}
+                            onChange={(e) => onUpdate(o.id, { opacity: +e.target.value })}
+                          />
+                          <span>{Math.round(o.opacity * 100)}%</span>
+                        </label>
+                      </div>
+                    )}
 
                     <div className="control-group">
                       <span className="control-label">{t.appearanceTime}</span>

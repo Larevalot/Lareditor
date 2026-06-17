@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { VideoUploader } from './components/VideoUploader';
 import { VideoPreview } from './components/VideoPreview';
 import { OverlayManager } from './components/OverlayManager';
-import { AudioControls } from './components/AudioControls';
+import { MainVideo } from './components/MainVideo';
 import { ExportPanel } from './components/ExportPanel';
 import { useFFmpeg } from './hooks/useFFmpeg';
 import { translations, type Lang } from './i18n';
@@ -28,12 +28,11 @@ function App() {
   const [lang, setLang] = useState<Lang>(() => (localStorage.getItem('lang') as Lang) || 'en');
   const [baseVideo, setBaseVideo] = useState<MediaFile | null>(null);
   const [overlays, setOverlays] = useState<OverlayItem[]>([]);
-  const [audioEnabled, setAudioEnabled] = useState(true);
-  const [audioFile, setAudioFile] = useState<MediaFile | null>(null);
+  const [volume, setVolume] = useState(1);
   const [isExporting, setIsExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);
   const [resultBlob, setResultBlob] = useState<Blob | null>(null);
-  const { load, loaded, loading, removeAudio, mergeVideoWithOverlay } = useFFmpeg();
+  const { load, loaded, loading, mergeVideoWithOverlay } = useFFmpeg();
 
   const t = translations[lang];
 
@@ -91,6 +90,23 @@ function App() {
     setOverlays((prev) => [...prev, newOverlay]);
   }, []);
 
+  const handleAddAudioOverlay = useCallback((media: MediaFile) => {
+    const newOverlay: OverlayItem = {
+      id: crypto.randomUUID(),
+      media: { ...media, type: 'audio' },
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0,
+      opacity: 1,
+      startTime: 0,
+      endTime: 30,
+      visible: true,
+      audioVolume: 1,
+    };
+    setOverlays((prev) => [...prev, newOverlay]);
+  }, []);
+
   const handleUpdateOverlay = useCallback((id: string, updates: Partial<OverlayItem>) => {
     setOverlays((prev) =>
       prev.map((o) => (o.id === id ? { ...o, ...updates } : o))
@@ -106,19 +122,6 @@ function App() {
       return prev.filter((o) => o.id !== id);
     });
   }, []);
-
-  const handleRemoveAudioFromVideo = useCallback(async () => {
-    if (!baseVideo || !loaded) return;
-    try {
-      const blob = await removeAudio(baseVideo.file!);
-      const url = URL.createObjectURL(blob);
-      const newFile = new File([blob], baseVideo.name, { type: 'video/mp4' });
-      if (baseVideo.url) URL.revokeObjectURL(baseVideo.url);
-      setBaseVideo({ file: newFile, url, type: 'video', name: baseVideo.name });
-    } catch (err) {
-      console.error('Error removing audio:', err);
-    }
-  }, [baseVideo, loaded, removeAudio]);
 
   const handleExport = useCallback(async () => {
     if (!baseVideo || !loaded) return;
@@ -145,13 +148,12 @@ function App() {
           backgroundColor: o.backgroundColor,
           outlineColor: o.outlineColor,
           outlineWidth: o.outlineWidth,
+          audioVolume: o.audioVolume,
         }));
 
       const blob = await mergeVideoWithOverlay(
         baseVideo.file!,
         overlayData,
-        audioFile?.file || null,
-        audioEnabled,
         setExportProgress
       );
       setResultBlob(blob);
@@ -160,7 +162,7 @@ function App() {
     } finally {
       setIsExporting(false);
     }
-  }, [baseVideo, loaded, overlays, audioFile, audioEnabled, mergeVideoWithOverlay]);
+  }, [baseVideo, loaded, overlays, mergeVideoWithOverlay]);
 
   const handleDownload = useCallback(() => {
     if (!resultBlob) return;
@@ -206,7 +208,7 @@ function App() {
               <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
               <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
             </svg>
-            {THEMES.find((th) => th.value === theme)?.label}
+            <span className="btn-label">{THEMES.find((th) => th.value === theme)?.label}</span>
           </button>
           <button className="btn-header" onClick={cycleLang} title={t.language}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -214,7 +216,7 @@ function App() {
               <line x1="2" y1="12" x2="22" y2="12" />
               <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
             </svg>
-            {LANGS.find((l) => l.value === lang)?.label}
+            <span className="btn-label">{LANGS.find((l) => l.value === lang)?.label}</span>
           </button>
           <a className="btn-header btn-social" href="https://www.instagram.com/larevalot_/" target="_blank" rel="noopener noreferrer" title="Instagram">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -251,7 +253,7 @@ function App() {
           <VideoPreview
             videoUrl={baseVideo?.url || null}
             overlays={overlays}
-            audioEnabled={audioEnabled}
+            volume={volume}
             onOverlayUpdate={handleUpdateOverlay}
             t={t}
           />
@@ -278,23 +280,21 @@ function App() {
           )}
 
           <div className="sidebar-section">
-            <OverlayManager
-              overlays={overlays}
-              onAdd={handleAddOverlay}
-              onAddText={handleAddTextOverlay}
-              onUpdate={handleUpdateOverlay}
-              onRemove={handleRemoveOverlay}
+            <MainVideo
+              volume={volume}
+              onVolumeChange={setVolume}
               t={t}
             />
           </div>
 
           <div className="sidebar-section">
-            <AudioControls
-              audioEnabled={audioEnabled}
-              audioFile={audioFile}
-              onToggle={() => setAudioEnabled(!audioEnabled)}
-              onFileSelect={setAudioFile}
-              onRemoveAudio={handleRemoveAudioFromVideo}
+            <OverlayManager
+              overlays={overlays}
+              onAdd={handleAddOverlay}
+              onAddText={handleAddTextOverlay}
+              onAddAudio={handleAddAudioOverlay}
+              onUpdate={handleUpdateOverlay}
+              onRemove={handleRemoveOverlay}
               t={t}
             />
           </div>
