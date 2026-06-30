@@ -5,7 +5,7 @@
 **A lightweight, browser-based video editor built with React and FFmpeg.wasm**
 
 [![Live Demo](https://img.shields.io/badge/Live_Demo-lareditor.vercel.app-6B8E23?style=for-the-badge&logo=vercel&logoColor=white)](https://lareditor.vercel.app/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-6B8E23?style=for-the-badge)](https://opensource.org/licenses/MIT)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-6B8E23?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6B8E23?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-6B8E23?style=for-the-badge&logo=react&logoColor=white)](https://react.dev/)
 
@@ -172,7 +172,7 @@ Contributions are welcome! Please follow these steps:
 
 ## License
 
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+This project is licensed under the GNU General Public License v3.0 — see the [LICENSE](LICENSE) file for details.
 
 ---
 
