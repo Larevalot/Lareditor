@@ -22,10 +22,12 @@ interface Props {
   onAddAudio: (media: MediaFile) => void;
   onUpdate: (id: string, updates: Partial<OverlayItem>) => void;
   onRemove: (id: string) => void;
+  onMoveUp?: (id: string) => void;
+  onMoveDown?: (id: string) => void;
   t: Translations;
 }
 
-export function OverlayManager({ overlays, onAdd, onAddText, onAddAudio, onUpdate, onRemove, t }: Props) {
+export function OverlayManager({ overlays, onAdd, onAddText, onAddAudio, onUpdate, onRemove, onMoveUp, onMoveDown, t }: Props) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showTextForm, setShowTextForm] = useState(false);
   const [textValue, setTextValue] = useState('Text');
@@ -197,6 +199,54 @@ export function OverlayManager({ overlays, onAdd, onAddText, onAddAudio, onUpdat
                   <span className="overlay-name">
                     {o.media.type === 'text' ? o.text : o.media.name}
                   </span>
+                  {onMoveUp && (
+                    <button
+                      className="btn-icon"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onMoveUp(o.id);
+                      }}
+                      title={t.moveUp}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="18 15 12 9 6 15" />
+                      </svg>
+                    </button>
+                  )}
+                  {onMoveDown && (
+                    <button
+                      className="btn-icon"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onMoveDown(o.id);
+                      }}
+                      title={t.moveDown}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="6 9 12 15 18 9" />
+                      </svg>
+                    </button>
+                  )}
+                  <button
+                    className="btn-icon"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onUpdate(o.id, { locked: !o.locked });
+                    }}
+                    title={o.locked ? t.unlock : t.lock}
+                  >
+                    {o.locked ? (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                        <path d="M7 11V7a5 5 0 0 1 9.9-1" />
+                      </svg>
+                    ) : (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                      </svg>
+                    )}
+                  </button>
                   <button
                     className="btn-icon"
                     onClick={(e) => {

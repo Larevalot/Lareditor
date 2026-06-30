@@ -74,6 +74,8 @@ export function Timeline({ duration, currentTime, overlays, isPlaying, onSeek, o
     return overlay.media.name;
   };
 
+  const pct = duration > 0 ? (currentTime / duration) * 100 : 0;
+
   return (
     <div className="timeline-container">
       <div className="timeline-header">
@@ -93,49 +95,52 @@ export function Timeline({ duration, currentTime, overlays, isPlaying, onSeek, o
         <span className="timeline-duration">{formatTime(duration)}</span>
       </div>
 
-      <div
-        className="timeline-track"
-        ref={trackRef}
-        onClick={handleTrackClick}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        style={{ minHeight: `${Math.max(40, 16 + overlays.length * 28)}px` }}
-      >
-        <div className="timeline-progress" style={{ width: `${(currentTime / duration) * 100}%` }} />
-        <div className="timeline-playhead" style={{ left: `${(currentTime / duration) * 100}%` }} />
+      <div className="timeline-layers-scroll">
+        <div
+          className="timeline-track"
+          ref={trackRef}
+          onClick={handleTrackClick}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+        >
+          <div className="timeline-progress" style={{ width: `${pct}%` }} />
+          <div className="timeline-playhead" style={{ left: `${pct}%` }} />
 
-        {overlays.map((overlay, index) => {
-          const left = (overlay.startTime / duration) * 100;
-          const width = ((overlay.endTime - overlay.startTime) / duration) * 100;
-          const color = overlay.timelineColor || getOverlayColor(overlay.media.type);
+          {overlays.map((overlay) => {
+            const left = (overlay.startTime / duration) * 100;
+            const width = ((overlay.endTime - overlay.startTime) / duration) * 100;
+            const color = overlay.timelineColor || getOverlayColor(overlay.media.type);
 
-          return (
-            <div
-              key={overlay.id}
-              className="timeline-overlay"
-              style={{
-                left: `${left}%`,
-                width: `${width}%`,
-                backgroundColor: color,
-                opacity: overlay.visible ? 0.8 : 0.3,
-                top: `${8 + index * 28}px`,
-                height: '22px',
-              }}
-              title={`${getOverlayLabel(overlay)} (${formatTime(overlay.startTime)} - ${formatTime(overlay.endTime)})`}
-            >
+            return (
               <div
-                className="timeline-handle timeline-handle-start"
-                onMouseDown={(e) => handleOverlayMouseDown(e, overlay.id, 'start')}
-              />
-              <span className="timeline-overlay-label">{getOverlayLabel(overlay)}</span>
-              <div
-                className="timeline-handle timeline-handle-end"
-                onMouseDown={(e) => handleOverlayMouseDown(e, overlay.id, 'end')}
-              />
-            </div>
-          );
-        })}
+                key={overlay.id}
+                className="timeline-layer-row"
+              >
+                <div
+                  className="timeline-overlay"
+                  style={{
+                    left: `${left}%`,
+                    width: `${width}%`,
+                    backgroundColor: color,
+                    opacity: overlay.visible ? 0.8 : 0.3,
+                  }}
+                  title={`${getOverlayLabel(overlay)} (${formatTime(overlay.startTime)} - ${formatTime(overlay.endTime)})`}
+                >
+                  <div
+                    className="timeline-handle timeline-handle-start"
+                    onMouseDown={(e) => handleOverlayMouseDown(e, overlay.id, 'start')}
+                  />
+                  <span className="timeline-overlay-label">{getOverlayLabel(overlay)}</span>
+                  <div
+                    className="timeline-handle timeline-handle-end"
+                    onMouseDown={(e) => handleOverlayMouseDown(e, overlay.id, 'end')}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       <div className="timeline-ticks">

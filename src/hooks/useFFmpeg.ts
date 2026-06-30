@@ -23,6 +23,12 @@ export interface OverlayData {
   fadeOutDuration?: number;
 }
 
+export interface CanvasConfig {
+  width: number;
+  height: number;
+  backgroundColor: string;
+}
+
 interface ProcessedOverlay {
   data: Uint8Array;
   type: 'image' | 'video';
@@ -97,7 +103,8 @@ export function useFFmpeg() {
   const mergeVideoWithOverlay = useCallback(async (
     baseVideo: File,
     overlays: OverlayData[],
-    onProgress?: (progress: number) => void
+    onProgress?: (progress: number) => void,
+    canvasConfig?: CanvasConfig
   ): Promise<Blob> => {
     if (!ffmpegRef.current) throw new Error('FFmpeg not loaded');
     const ffmpeg = ffmpegRef.current;
@@ -113,6 +120,12 @@ export function useFFmpeg() {
       const baseData = new Uint8Array(await baseVideo.arrayBuffer());
       await ffmpeg.writeFile('base.mp4', baseData);
       writtenFiles.push('base.mp4');
+
+      const duration = await getVideoDuration(baseVideo);
+
+      const outputWidth = canvasConfig?.width || 1920;
+      const outputHeight = canvasConfig?.height || 1080;
+      const bgColor = canvasConfig?.backgroundColor || '#000000';
 
       const inputArgs: string[] = ['-i', 'base.mp4'];
       let inputIdx = 1;
@@ -188,25 +201,30 @@ export function useFFmpeg() {
       const hasVideoOverlayAudio = videoOverlaysWithAudio.length > 0;
       const hasAnyAudio = hasStandaloneAudio || hasVideoOverlayAudio;
 
+      const hexToRgb = (hex: string) => {
+        const h = hex.replace('#', '');
+        return `0x${h}`;
+      };
+
       if (hasVisuals) {
-        const filter = buildVideoFilter(visualOverlays);
+        const filter = buildVideoFilter(visualOverlays, outputWidth, outputHeight, hexToRgb(bgColor), duration);
         args.push('-filter_complex', filter);
+        args.push('-map', '[vout]');
+      } else {
+        args.push('-filter_complex', `color=c=${hexToRgb(bgColor)}:s=${outputWidth}x${outputHeight}:d=${duration}[vout]`);
         args.push('-map', '[vout]');
       }
 
       if (hasAnyAudio) {
-        const audioFilter = buildAudioFilter(audioOverlays, visualOverlays.length, videoOverlaysWithAudio);
-        if (hasVisuals) {
-          const existingFilter = args[args.indexOf('-filter_complex') + 1];
-          args[args.indexOf('-filter_complex') + 1] = existingFilter + ';' + audioFilter;
-        } else {
-          args.push('-filter_complex', audioFilter);
-        }
+        const audioFilter = buildAudioFilter(audioOverlays, visualOverlays.length, videoOverlaysWithAudio, visualOverlays);
+        const existingFilter = args[args.indexOf('-filter_complex') + 1] || '';
+        args[args.indexOf('-filter_complex') + 1] = existingFilter + ';' + audioFilter;
         args.push('-map', '[aout]');
-        args.push('-shortest');
       } else {
         args.push('-map', '0:a?');
       }
+
+      args.push('-shortest');
 
       args.push('-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '23', '-c:a', 'aac', '-y', 'out.mp4');
 
@@ -226,9 +244,11 @@ export function useFFmpeg() {
   return { load, loaded, loading, error, removeAudio, mergeVideoWithOverlay };
 }
 
-function buildVideoFilter(overlays: ProcessedOverlay[]): string {
+function buildVideoFilter(overlays: ProcessedOverlay[], outputWidth: number, outputHeight: number, bgColor: string, duration: number): string {
   const parts: string[] = [];
-  let prev = '0:v';
+  
+  parts.push(`color=c=${bgColor}:s=${outputWidth}x${outputHeight}:d=${duration}[bg]`);
+  let prev = 'bg';
 
   for (let i = 0; i < overlays.length; i++) {
     const ov = overlays[i];
@@ -250,49 +270,44 @@ function buildVideoFilter(overlays: ProcessedOverlay[]): string {
     overlayInput += `[ol${idx}]`;
     parts.push(overlayInput);
 
-    if (ov.type === 'image') {
-      parts.push(`[${prev}][ol${idx}]overlay=${ov.x}:${ov.y}:enable='${enable}'[${outLabel}]`);
-    } else {
-      parts.push(`[${prev}][ol${idx}]overlay=${ov.x}:${ov.y}:enable='${enable}':shortest=1[${outLabel}]`);
-    }
+    parts.push(`[${prev}][ol${idx}]overlay=${ov.x}:${ov.y}:enable='${enable}'[${outLabel}]`);
     prev = outLabel;
   }
 
   return parts.join(';');
 }
 
-function buildAudioFilter(audios: ProcessedAudio[], visualCount: number, videoOverlays: ProcessedOverlay[]): string {
+function buildAudioFilter(audios: ProcessedAudio[], visualCount: number, videoOverlays: ProcessedOverlay[], allVisuals: ProcessedOverlay[]): string {
   const parts: string[] = [];
-  const audioInputs: string[] = ['0:a'];
+  const audioInputs: string[] = [];
+
+  parts.push(`[0:a]acopy[base_a]`);
+  audioInputs.push(`[base_a]`);
 
   for (let i = 0; i < audios.length; i++) {
     const au = audios[i];
     const inputIdx = visualCount + i + 1;
     const label = `au${i}`;
 
-    const volFilter = `volume=${au.volume}`;
-    const enableFilter = `aeval=0:enable='between(t\\,${au.startTime}\\,${au.endTime})'`;
-
-    parts.push(`[${inputIdx}:a]${volFilter},${enableFilter}[${label}]`);
+    parts.push(`[${inputIdx}:a]volume=${au.volume},atrim=start=${au.startTime}:end=${au.endTime},asetpts=PTS-STARTPTS[${label}]`);
     audioInputs.push(`[${label}]`);
   }
 
   for (let i = 0; i < videoOverlays.length; i++) {
     const ov = videoOverlays[i];
-    const inputIdx = ov.type === 'video' ? videoOverlays.indexOf(ov) + 1 : -1;
-    if (inputIdx < 0) continue;
+    const visualIndex = allVisuals.indexOf(ov);
+    if (visualIndex < 0) continue;
+    const inputIdx = visualIndex + 1;
     const label = `vau${i}`;
-    const volFilter = `volume=${ov.audioVolume ?? 1}`;
-    const enableFilter = `aeval=0:enable='between(t\\,${ov.startTime}\\,${ov.endTime})'`;
 
-    parts.push(`[${inputIdx}:a]${volFilter},${enableFilter}[${label}]`);
+    parts.push(`[${inputIdx}:a]volume=${ov.audioVolume ?? 1},atrim=start=${ov.startTime}:end=${ov.endTime},asetpts=PTS-STARTPTS[${label}]`);
     audioInputs.push(`[${label}]`);
   }
 
   if (audioInputs.length > 1) {
-    parts.push(`${audioInputs.join()}amix=inputs=${audioInputs.length}:duration=longest[aout]`);
+    parts.push(`${audioInputs.join('')}amix=inputs=${audioInputs.length}:duration=longest:normalize=0[aout]`);
   } else {
-    parts.push(`[0:a]acopy[aout]`);
+    parts.push(`[base_a]acopy[aout]`);
   }
 
   return parts.join(';');
@@ -352,6 +367,23 @@ async function renderTextToPng(overlay: OverlayData): Promise<{ data: Uint8Array
         resolve({ data: new Uint8Array(buf), width, height });
       });
     }, 'image/png');
+  });
+}
+
+function getVideoDuration(file: File): Promise<number> {
+  return new Promise((resolve) => {
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.onloadedmetadata = () => {
+      const d = video.duration;
+      URL.revokeObjectURL(video.src);
+      resolve(isFinite(d) && d > 0 ? d : 60);
+    };
+    video.onerror = () => {
+      URL.revokeObjectURL(video.src);
+      resolve(60);
+    };
+    video.src = URL.createObjectURL(file);
   });
 }
 

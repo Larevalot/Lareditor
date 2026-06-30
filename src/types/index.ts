@@ -16,6 +16,7 @@ export interface OverlayItem {
   startTime: number;
   endTime: number;
   visible: boolean;
+  locked?: boolean;
   text?: string;
   fontFamily?: string;
   fontSize?: number;
