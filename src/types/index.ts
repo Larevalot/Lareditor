@@ -28,6 +28,10 @@ export interface OverlayItem {
   audioVolume?: number;
   fadeInDuration?: number;
   fadeOutDuration?: number;
+  zoomInDuration?: number;
+  zoomOutDuration?: number;
+  zoomInScale?: number;
+  zoomOutScale?: number;
   timelineColor?: string;
 }
 

@@ -21,6 +21,10 @@ export interface OverlayData {
   audioVolume?: number;
   fadeInDuration?: number;
   fadeOutDuration?: number;
+  zoomInDuration?: number;
+  zoomOutDuration?: number;
+  zoomInScale?: number;
+  zoomOutScale?: number;
 }
 
 export interface CanvasConfig {
@@ -40,6 +44,10 @@ interface ProcessedOverlay {
   endTime: number;
   fadeInDuration: number;
   fadeOutDuration: number;
+  zoomInDuration: number;
+  zoomOutDuration: number;
+  zoomInScale: number;
+  zoomOutScale: number;
   audioVolume?: number;
 }
 
@@ -157,6 +165,10 @@ export function useFFmpeg() {
             endTime: ov.endTime,
             fadeInDuration: ov.fadeInDuration ?? 0,
             fadeOutDuration: ov.fadeOutDuration ?? 0,
+            zoomInDuration: ov.zoomInDuration ?? 0,
+            zoomOutDuration: ov.zoomOutDuration ?? 0,
+            zoomInScale: ov.zoomInScale ?? 1.5,
+            zoomOutScale: ov.zoomOutScale ?? 0.5,
           });
         } else if (ov.file) {
           const data = new Uint8Array(await ov.file.arrayBuffer());
@@ -171,6 +183,10 @@ export function useFFmpeg() {
             endTime: ov.endTime,
             fadeInDuration: ov.fadeInDuration ?? 0,
             fadeOutDuration: ov.fadeOutDuration ?? 0,
+            zoomInDuration: ov.zoomInDuration ?? 0,
+            zoomOutDuration: ov.zoomOutDuration ?? 0,
+            zoomInScale: ov.zoomInScale ?? 1.5,
+            zoomOutScale: ov.zoomOutScale ?? 0.5,
             audioVolume: ov.type === 'video' ? (ov.audioVolume ?? 1) : undefined,
           });
         }
@@ -258,6 +274,36 @@ function buildVideoFilter(overlays: ProcessedOverlay[], outputWidth: number, out
     const enable = `between(t\\,${ov.startTime}\\,${ov.endTime})`;
 
     let overlayInput = `[${idx}:v]scale=${ov.width}:${ov.height},setsar=1`;
+
+    const hasZoom = (ov.zoomInDuration > 0) || (ov.zoomOutDuration > 0);
+    
+    if (hasZoom) {
+      const fps = 30;
+      const totalFrames = Math.ceil((ov.endTime - ov.startTime) * fps);
+      const zoomInFrames = Math.ceil(ov.zoomInDuration * fps);
+      const zoomOutFrames = Math.ceil(ov.zoomOutDuration * fps);
+      const zoomInScale = ov.zoomInScale;
+      const zoomOutScale = ov.zoomOutScale;
+      
+      let zoomExpr: string;
+      
+      if (ov.zoomInDuration > 0 && ov.zoomOutDuration > 0) {
+        zoomExpr = `if(lt(on\\,${zoomInFrames})\\,` +
+          `${1/zoomInScale}+(${1-1/zoomInScale})*on/${zoomInFrames}\\,` +
+          `if(gt(on\\,${totalFrames-zoomOutFrames})\\,` +
+          `${zoomOutScale}+(${1-zoomOutScale})*(on-(${totalFrames-zoomOutFrames}))/${zoomOutFrames}\\,` +
+          `1))`;
+      } else if (ov.zoomInDuration > 0) {
+        zoomExpr = `if(lt(on\\,${zoomInFrames})\\,` +
+          `${1/zoomInScale}+(${1-1/zoomInScale})*on/${zoomInFrames}\\,1)`;
+      } else {
+        zoomExpr = `if(gt(on\\,${totalFrames-zoomOutFrames})\\,` +
+          `${zoomOutScale}+(${1-zoomOutScale})*(on-(${totalFrames-zoomOutFrames}))/${zoomOutFrames}\\,` +
+          `1)`;
+      }
+      
+      overlayInput += `,zoompan=z='${zoomExpr}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${totalFrames}:s=${ov.width}x${ov.height}:fps=${fps}`;
+    }
 
     if (ov.fadeInDuration > 0) {
       overlayInput += `,fade=t=in:st=${ov.startTime}:d=${ov.fadeInDuration}:alpha=1`;

@@ -549,6 +549,64 @@ export function OverlayManager({ overlays, onAdd, onAddText, onAddAudio, onUpdat
                             </div>
                           </div>
                         </div>
+                        <div className="time-inputs">
+                          <div className="time-field">
+                            <span className="time-label">{t.zoomIn}</span>
+                            <div className="time-input-row">
+                              <input
+                                type="number"
+                                min={0}
+                                max={10}
+                                step={0.1}
+                                value={o.zoomInDuration ?? 0}
+                                onChange={(e) => onUpdate(o.id, { zoomInDuration: Math.max(0, +e.target.value) })}
+                              />
+                              <span className="time-display">s</span>
+                            </div>
+                            {(o.zoomInDuration ?? 0) > 0 && (
+                              <div className="time-input-row">
+                                <span className="time-label">{t.zoomInScale}</span>
+                                <input
+                                  type="number"
+                                  min={1}
+                                  max={5}
+                                  step={0.1}
+                                  value={o.zoomInScale ?? 1.5}
+                                  onChange={(e) => onUpdate(o.id, { zoomInScale: Math.max(1, +e.target.value) })}
+                                />
+                                <span className="time-display">x</span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="time-field">
+                            <span className="time-label">{t.zoomOut}</span>
+                            <div className="time-input-row">
+                              <input
+                                type="number"
+                                min={0}
+                                max={10}
+                                step={0.1}
+                                value={o.zoomOutDuration ?? 0}
+                                onChange={(e) => onUpdate(o.id, { zoomOutDuration: Math.max(0, +e.target.value) })}
+                              />
+                              <span className="time-display">s</span>
+                            </div>
+                            {(o.zoomOutDuration ?? 0) > 0 && (
+                              <div className="time-input-row">
+                                <span className="time-label">{t.zoomOutScale}</span>
+                                <input
+                                  type="number"
+                                  min={0.1}
+                                  max={1}
+                                  step={0.1}
+                                  value={o.zoomOutScale ?? 0.5}
+                                  onChange={(e) => onUpdate(o.id, { zoomOutScale: Math.max(0.1, +e.target.value) })}
+                                />
+                                <span className="time-display">x</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     )}
 

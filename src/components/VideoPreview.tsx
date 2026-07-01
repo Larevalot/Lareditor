@@ -101,7 +101,35 @@ export function VideoPreview({ videoUrl, overlays, volume, canvasConfig, videoDu
         currentOpacity = overlay.opacity * Math.min(1, Math.max(0, progress));
       }
 
+      const zoomInDur = overlay.zoomInDuration ?? 0;
+      const zoomOutDur = overlay.zoomOutDuration ?? 0;
+      const zoomInScale = overlay.zoomInScale ?? 1.5;
+      const zoomOutScale = overlay.zoomOutScale ?? 0.5;
+
+      let currentScale = 1;
+      const relativeTime = time - overlay.startTime;
+
+      if (zoomInDur > 0 && relativeTime < zoomInDur) {
+        const progress = relativeTime / zoomInDur;
+        const eased = 1 - Math.pow(1 - progress, 3);
+        currentScale = (1 / zoomInScale) + (1 - 1 / zoomInScale) * eased;
+      } else if (zoomOutDur > 0 && time > overlay.endTime - zoomOutDur) {
+        const progress = (overlay.endTime - time) / zoomOutDur;
+        const eased = 1 - Math.pow(1 - progress, 3);
+        currentScale = zoomOutScale + (1 - zoomOutScale) * eased;
+      }
+
+      ctx.save();
       ctx.globalAlpha = currentOpacity;
+
+      const centerX = overlay.x + (overlay.width || 0) / 2;
+      const centerY = overlay.y + (overlay.height || 0) / 2;
+
+      if (currentScale !== 1) {
+        ctx.translate(centerX, centerY);
+        ctx.scale(currentScale, currentScale);
+        ctx.translate(-centerX, -centerY);
+      }
 
       if (overlay.media.type === 'text') {
         const fontSize = overlay.fontSize || 48;
@@ -183,7 +211,7 @@ export function VideoPreview({ videoUrl, overlays, volume, canvasConfig, videoDu
         }
       }
 
-      ctx.globalAlpha = 1;
+      ctx.restore();
     });
   }, [overlays, isPlaying]);
 
